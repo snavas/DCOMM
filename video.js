@@ -24,7 +24,7 @@ let minY;
 let screenHeight = 1080;
 let screenWidth = 1920;
 let logCounter = 0;
-let logging = false;
+let logging = true;
 //start calibrating
 ipcRenderer.on('started-calibrating', function (event) {
     ipcRenderer.send('log', {message: "test, started-calibrating"});
@@ -34,7 +34,8 @@ ipcRenderer.on('started-calibrating', function (event) {
 });
 //logging
 if(logging == true) {
-    ipcRenderer.send('create-write-stream', {filename: "handCoordinates.txt"});
+    //ipcRenderer.send('create-write-stream', {filename: "handCoordinates.txt"});
+	ipcRenderer.send('create-write-stream', {filename: "log/handCoordinates-"+ new Date().getTime() +".txt"});
 }
 //start the stream
 function stream() {
@@ -89,9 +90,17 @@ function stream() {
                 let result2 = recognizeHands(result, resizedDepthFrame, depthScale);
 
                 logCounter++;
+				
+				//const result25 = result2.applyColorMap(result2, cv.COLORMAP_WINTER);
 
                 //convert color of result stream
-                const result3 = result2.cvtColor(cv.COLOR_BGR2RGBA);
+                //const result3 = result2.cvtColor(cv.COLOR_BGR2RGBA);
+				const result3 = result2.cvtColor(cv.COLOR_RGB2GRAY);
+				
+				//const processedImage = cv.applyColorMap(result3, cv.COLORMAP_AUTUMN);
+				
+				//const processedImage = cv.applyColorMap(handMask, cv.COLORMAP_WINTER);
+				//let result = resizedImg.copy(processedImage);
 
                 //send to other machine
                 if(result3) {
@@ -145,13 +154,18 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
 // segmenting by skin color (could be adjsuted for different skin colors)
     const skinColorUpper = hue => new cv.Vec(hue, 0.8 * 255, 0.6 * 255);
     const skinColorLower = hue => new cv.Vec(hue, 0.1 * 255, 0.05 * 255);
+	const pinkUpper = hue => new cv.Vec(hue, 0.8 * 255, 0.6 * 255);
+    const pinkLower = hue => new cv.Vec(hue, 0.1 * 255, 0.05 * 255);
 
     //function to create the hand mask in the stream
     const makeHandMask = (img) => {
         // filter by skin color
         const imgHLS = img.cvtColor(cv.COLOR_RGB2HLS);
-        const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(50));
-
+        //const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(50));
+		const rangeMask = imgHLS.inRange(skinColorLower(140), skinColorUpper(170));
+		// https://stackoverflow.com/questions/48528754/what-are-recommended-color-spaces-for-detecting-orange-color-in-open-cv
+		//const rangeMask = imgHLS.inRange(hsv,(145, 100, 20), (155, 255, 255) )
+		
         // remove noise
         const blurred = rangeMask.blur(new cv.Size(5, 5));
         const thresholded = blurred.threshold(200, 255, cv.THRESH_BINARY);
@@ -168,7 +182,10 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
         //count up if there are more hands
         contours.sort((c0, c1) => c1.area - c0.area);
         for(var hands=0;hands<contours.length;hands++){
-                handContours.push(contours[hands]);
+				// IF CONTOURS > CERTAIN AREA PIXEL SIZE THEN WE PUSH IT TO THE Array
+				//console.log(contours[hands].area);
+				if (contours[hands].area>5000) handContours.push(contours[hands]);
+				//handContours.push(contours[hands])
         }
         return handContours;
     };
@@ -278,7 +295,8 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
     const col2 = new cv.Vec(254,204,92);
     const col3 = new cv.Vec(253,141,60);
     const col4 = new cv.Vec(240,59,32);
-    const col5 = new cv.Vec(189,0,38);
+    //const col5 = new cv.Vec(189,0,38);
+	const col5 = new cv.Vec(240,59,32);
 
     const resizedImg = colorMat.resize(screenHeight,screenWidth);
 
@@ -290,7 +308,12 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
     }
     const maxPointDist = 25;
     const maxAngleDeg = 60;
-    let result = resizedImg.copy(handMask);
+	
+	//const processedImage = cv.applyColorMap(handMask, cv.COLORMAP_AUTUMN);
+	let result = resizedImg.copy(handMask);
+	//const processedImage = cv.applyColorMap(result, cv.COLORMAP_AUTUMN);
+	//const processedImage = cv.applyColorMap(handMask, cv.COLORMAP_WINTER);
+    //let result = resizedImg.copy(processedImage);
 
     for(var i=0;i<handContour.length;i++) {
         //getting the hull of the hand contour with the fingertips
@@ -324,12 +347,17 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
         );
 
         // log the coordinates and distance in a new file (optional; set logging to true if desired)
-        if(logCounter %30 == 0 && logging == true){
-            ipcRenderer.send('write-to-file', {logText: "x coordinate: " + centerX + ", y coordinate: " + centerY + ", Distance to table: " + pixelDistToTable + " Time: " + new Date().toUTCString() + "\n"});
-        }
+        if(logCounter %10 == 0 && logging == true){
+			// HUMAN READABLE
+			// ipcRenderer.send('write-to-file', {logText: "x coordinate: " + centerX + ", y coordinate: " + centerY + ", Distance to table: " + pixelDistToTable + " Time: " + new Date().toUTCString() + "\n"});
+			// MACHINE READABLE (CSV FORMAT)
+            ipcRenderer.send('write-to-file', {logText: "T" + new Date().getTime() + "H " + centerX + " " + centerY + " " + pixelDistToTable});
+		}
 
         // draw circles around fingertips
         verticesWithValidAngle.forEach((v) => {
+			
+			if(logCounter %10 == 0 && logging == true) ipcRenderer.send('write-to-file', {logText: " P " + v.pt.x + " " + v.pt.y});
 
             /* distance from table to fingertips
             let depthValue2 = depthFrame.at(v.pt.y, v.pt.x);
@@ -343,6 +371,10 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
             }
             );
         });
+		
+
+		if(logCounter %10 == 0 && logging == true) ipcRenderer.send('write-to-file', {logText: "\n"});
+		
     }
     return result;
 }

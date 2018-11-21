@@ -24,7 +24,7 @@
     "fs": "0.0.1-security",
     "node-glfw-3": "^0.3.3",
     "node-librealsense": "^0.2130.0",
-    "opencv4nodejs": "^4.5.0",
+    "opencv4nodejs": "^4.8.0",
     "socket.io": "^2.1.1",
     "util": "^0.11.0"
   }

@@ -29,6 +29,8 @@ document.getElementById('endStreaming').addEventListener("click", function() {
     ipcRenderer.send('end-streaming');
 });
 
+localStorage.debug = '*';
+
 /**
  * Function is called when the "join session" button is clicked on the UI. Connects to the IP of the other machine.
  */

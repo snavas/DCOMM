@@ -25,6 +25,8 @@ let screenHeight = 1080;
 let screenWidth = 1920;
 let logCounter = 0;
 let logging = true;
+let ws;
+
 //start calibrating
 ipcRenderer.on('started-calibrating', function (event) {
     ipcRenderer.send('log', {message: "test, started-calibrating"});
@@ -36,10 +38,10 @@ ipcRenderer.on('started-calibrating', function (event) {
 if(logging == true) {
     //ipcRenderer.send('create-write-stream', {filename: "handCoordinates.txt"});
 	ipcRenderer.send('create-write-stream', {filename: "log/handCoordinates-"+ new Date().getTime() +".txt"});
+	ws = new WebSocket("ws://130.88.193.27:8080");
 }
 //start the stream
 function stream() {
-
     ipcRenderer.send('log', {message: "startedStreaming:" + startedStreaming});
     startedStreaming = true;
     const profile = pipeline.start();
@@ -345,6 +347,8 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
                 thickness: 2
             }
         );
+		
+		let temp = "";
 
         // log the coordinates and distance in a new file (optional; set logging to true if desired)
         if(logCounter %10 == 0 && logging == true){
@@ -352,12 +356,17 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
 			// ipcRenderer.send('write-to-file', {logText: "x coordinate: " + centerX + ", y coordinate: " + centerY + ", Distance to table: " + pixelDistToTable + " Time: " + new Date().toUTCString() + "\n"});
 			// MACHINE READABLE (CSV FORMAT)
             ipcRenderer.send('write-to-file', {logText: "T" + new Date().getTime() + "H " + centerX + " " + centerY + " " + pixelDistToTable});
+			temp = temp + "T" + new Date().getTime() + "H " + centerX + " " + centerY + " " + pixelDistToTable;
 		}
 
         // draw circles around fingertips
         verticesWithValidAngle.forEach((v) => {
 			
-			if(logCounter %10 == 0 && logging == true) ipcRenderer.send('write-to-file', {logText: " P " + v.pt.x + " " + v.pt.y});
+			if(logCounter %10 == 0 && logging == true){
+				ipcRenderer.send('write-to-file', {logText: " P " + v.pt.x + " " + v.pt.y});
+				temp = temp + " P " + v.pt.x + " " + v.pt.y;
+			} 
+
 
             /* distance from table to fingertips
             let depthValue2 = depthFrame.at(v.pt.y, v.pt.x);
@@ -373,7 +382,10 @@ function recognizeHands(colorMat, depthFrame, depthScale) {
         });
 		
 
-		if(logCounter %10 == 0 && logging == true) ipcRenderer.send('write-to-file', {logText: "\n"});
+		if(logCounter %10 == 0 && logging == true){
+			ipcRenderer.send('write-to-file', {logText: "\n"});
+			ws.send(temp);
+		} 
 		
     }
     return result;

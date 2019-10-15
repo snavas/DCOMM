@@ -16,9 +16,13 @@ const ipcRenderer = require('electron').ipcRenderer;
 
 document.getElementById('createSession').addEventListener("click", function() {
     createServerSesson();
+	//createSocket();
+	//testConnection();
 });
 document.getElementById('joinSession').addEventListener("click", function() {
     joinSession();
+	//createSocket();
+	//testConnection();
 });
 
 document.getElementById('calibrate').addEventListener("click", function() {
@@ -38,12 +42,14 @@ function joinSession() {
     io = require('socket.io-client');
     let hostIP = document.getElementById('joinSessionId').value;
     console.log(hostIP);
-    let socket = io.connect(hostIP + ":3000/", {
+    let socket = io.connect("http://" + hostIP + ":3000/", {
         reconnection: true
     });
 
     socket.on('connect', function() {
         console.log('connected');
+		//var websocket = new WebSocket("localhost");
+		//websocket.send("hola soy un socket que joined session");
         _socket = socket;
         targetRole = "server";
         socket.on('clientEvent', function(data) {
@@ -102,6 +108,35 @@ function joinSession() {
 }
 
 /**
+ * TEST SEND COORDS VIA WEBSHOCKET
+ */
+
+function testConnection() {
+	console.log("ATTEMPTED TO CREATE SOCKET FOR COORDINATES");
+    io = require('socket.io-client');
+    //let hostIP = document.getElementById('joinSessionId').value;
+    let socket2 = io.connect("http://localhost:8080", {
+        reconnection: true
+    });
+
+	/*
+    socket2.on('connect', function() {
+        console.log('connected');
+        _socket2 = socket2;
+        targetRole = "server";
+        //
+        ipcRenderer.on('camera-data', function(event, data) {
+                data.displayStream = displayStream;
+                socket2.emit('serverEvent', data);
+        });
+    });
+	*/
+	
+	//var websocket = new WebSocket("localhost");
+	//websocket.send("hola soy un socket");
+} 
+
+/**
  * Same function like above, but for machine which creates the session
  */
 function createServerSesson() {
@@ -109,6 +144,8 @@ function createServerSesson() {
     io = require('socket.io').listen(3000);
     io.on('connection', function(socket) {
         console.log('connected:', socket.client.id);
+		//var websocket = new WebSocket("localhost");
+		//websocket.send("hola soy un socket que created session");
         _socket = socket;
         targetRole = "client";
         socket.on('serverEvent', function(data) {

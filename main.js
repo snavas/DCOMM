@@ -102,3 +102,7 @@ ipcMain.on('end-streaming', function(event, data) {
 ipcMain.on('logObject', function(event, data) {
     console.log(util.inspect(data.data,false,null));
 });
+
+ipcMain.on('sendCoords', function(event, data) {
+    mainWindow.webContents.send('sendCoords', data)
+});

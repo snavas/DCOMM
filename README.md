@@ -1,5 +1,5 @@
-# SP-RCARAP
-Supporting Remote Collaboration with Augmented Reality and Architectural Plans (Summer semester 2018)
+# DCOMM
+The DCOMM System is a forck of the [RCARAP system](https://github.com/sitcomlab/RCARAP).
 
 # Goal
 The goal of the study project "Supporting remote collaboration with Augmented Reality and architectural plans" is to use depth cameras (Intel RealSense D435) in combination with a tabletop system to project the hand of a person pointing on a plan to the second tabletop system in a different room/building. This approach supports architects, for example in decision making processes or discussions. It includes depth information which can be useful in different applications, for example indicating the height of a wall.
